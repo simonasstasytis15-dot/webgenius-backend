@@ -47,7 +47,7 @@ class UserOut(BaseModel):
     display_name: str
     role: UserRole
     is_active: bool
-    avatar_color: str
+    avatar_emoji: str
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -55,11 +55,11 @@ class UserOut(BaseModel):
 
 class UserUpdate(BaseModel):
     display_name: Optional[str] = None
-    avatar_color: Optional[str] = None
+    avatar_emoji: Optional[str] = None
 
-    @field_validator("avatar_color")
+    @field_validator("avatar_emoji")
     @classmethod
     def valid_hex(cls, v):
         if v and (not v.startswith("#") or len(v) != 7):
-            raise ValueError("avatar_color must be a hex color like #4285F4")
+            raise ValueError("avatar_emoji should be an emoji like 🧑")
         return v

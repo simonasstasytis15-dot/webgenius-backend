@@ -2,7 +2,7 @@ from pydantic import BaseModel, field_validator
 from typing import Optional
 from uuid import UUID
 from datetime import datetime
-from app.models.api_key import ApiProvider
+from app.models.user import Provider as ApiProvider
 
 
 # ── Class ─────────────────────────────────────────────────────────────────────
@@ -127,7 +127,7 @@ class StudentDashboardRow(BaseModel):
     student_id: UUID
     display_name: str
     email: str
-    avatar_color: str
+    avatar_emoji: str
     enrolled_at: datetime
     is_active: bool
 
