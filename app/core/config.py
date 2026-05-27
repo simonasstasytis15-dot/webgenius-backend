@@ -16,6 +16,24 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "postgresql+asyncpg://webgenius:webgenius@localhost:5432/webgenius"
     DATABASE_URL_SYNC: str = "postgresql://webgenius:webgenius@localhost:5432/webgenius"
 
+    @field_validator("DATABASE_URL", mode="before")
+    @classmethod
+    def fix_async_url(cls, v: str) -> str:
+        if v.startswith("postgresql://"):
+            return v.replace("postgresql://", "postgresql+asyncpg://", 1)
+        if v.startswith("postgres://"):
+            return v.replace("postgres://", "postgresql+asyncpg://", 1)
+        return v
+
+    @field_validator("DATABASE_URL_SYNC", mode="before")
+    @classmethod
+    def fix_sync_url(cls, v: str) -> str:
+        if v.startswith("postgresql+asyncpg://"):
+            return v.replace("postgresql+asyncpg://", "postgresql://", 1)
+        if v.startswith("postgres://"):
+            return v.replace("postgres://", "postgresql://", 1)
+        return v
+
     # Redis
     REDIS_URL: str = "redis://localhost:6379/0"
 
