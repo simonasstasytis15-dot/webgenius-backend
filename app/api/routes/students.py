@@ -107,6 +107,23 @@ async def update_student(
     return student
 
 
+@router.get("/{student_id}/progress")
+async def get_student_progress(
+    student_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Return current week for a student (from their first class membership)."""
+    if current_user.role == UserRole.student and current_user.id != student_id:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    result = await db.execute(
+        select(ClassMember).where(ClassMember.user_id == student_id)
+    )
+    member = result.scalars().first()
+    return {"current_week": member.current_week if member else 1}
+
+
 @router.get("/{student_id}/keys")
 async def get_student_key_status(
     student_id: str,

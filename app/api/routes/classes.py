@@ -1,7 +1,7 @@
 import secrets
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, func
 
 from app.core.database import get_db
 from app.core.security import require_teacher, get_current_user
@@ -11,6 +11,27 @@ from app.services.api_key_service import ApiKeyService
 from app.core.redis import get_redis, UsageTracker
 
 router = APIRouter(prefix="/classes", tags=["classes"])
+
+
+@router.get("", response_model=list[ClassResponse])
+async def list_classes(
+    db: AsyncSession = Depends(get_db),
+    teacher: User = Depends(require_teacher),
+):
+    """List all active classes belonging to this teacher."""
+    result = await db.execute(
+        select(Class).where(Class.teacher_id == teacher.id, Class.is_active == True)
+    )
+    classes = result.scalars().all()
+
+    out = []
+    for c in classes:
+        count_result = await db.execute(
+            select(func.count(ClassMember.id)).where(ClassMember.class_id == c.id)
+        )
+        count = count_result.scalar() or 0
+        out.append({**c.__dict__, "student_count": count})
+    return out
 
 
 @router.post("", response_model=ClassResponse, status_code=201)
@@ -156,3 +177,32 @@ async def get_class_usage(
         }
         for sid in student_ids
     ]
+
+
+@router.patch("/{class_id}/students/{student_id}/week")
+async def advance_student_week(
+    class_id: str,
+    student_id: str,
+    db: AsyncSession = Depends(get_db),
+    teacher: User = Depends(require_teacher),
+):
+    """Advance a student's current week by 1."""
+    class_result = await db.execute(
+        select(Class).where(Class.id == class_id, Class.teacher_id == teacher.id)
+    )
+    if not class_result.scalar_one_or_none():
+        raise HTTPException(status_code=404, detail="Class not found")
+
+    member_result = await db.execute(
+        select(ClassMember).where(
+            ClassMember.class_id == class_id,
+            ClassMember.user_id == student_id,
+        )
+    )
+    member = member_result.scalar_one_or_none()
+    if not member:
+        raise HTTPException(status_code=404, detail="Student not in class")
+
+    member.current_week += 1
+    await db.flush()
+    return {"student_id": student_id, "current_week": member.current_week}

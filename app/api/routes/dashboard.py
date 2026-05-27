@@ -10,6 +10,7 @@ from app.core.database import get_db
 from app.core.security import require_teacher
 from app.models.user import User, Class, ClassMember, ApiKey, Provider, UsageLog
 from app.services.rate_limiter import rate_limiter
+from app.core.redis import get_redis, UsageTracker
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
@@ -45,9 +46,12 @@ async def class_dashboard(
     for key in all_keys:
         key_map[key.user_id][key.provider.value] = key.status.value
 
+    redis = await get_redis()
+    tracker = UsageTracker(redis)
+
     dashboard_rows = []
     for member, student in rows:
-        usage = await rate_limiter.get_all_usage_today(str(student.id))
+        usage = await tracker.get_all_today(str(student.id))
         dashboard_rows.append({
             "student_id": student.id,
             "display_name": student.display_name,

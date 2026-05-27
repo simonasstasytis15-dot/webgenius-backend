@@ -172,6 +172,58 @@ async def veo_generate(
     )
 
 
+# ── Baitas AI character ───────────────────────────────────────────────────────
+
+class BaitasRequest(BaseModel):
+    message: str
+    history: list[dict] = []   # [{role, text}, ...] prior turns
+    lesson_title: str = ""
+    lesson_week: int = 1
+
+
+@router.post("/baitas")
+async def baitas_chat(
+    body: BaitasRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    redis=Depends(get_redis),
+):
+    """Baitas — the Lithuanian AI character that guides students through lessons."""
+    system_prompt = (
+        f"Tu esi Baitas — draugiškas AI asistentas ir mokytojas vaikams nuo 10 iki 12 metų "
+        f"WebGenius platformoje. Tu veduoji mokinius per kūrybines AI pamokas.\n\n"
+        f"SVARBU:\n"
+        f"- Visada kalbėk lietuviškai\n"
+        f"- Būk linksmas, draugiškas ir skatinantis\n"
+        f"- Duok trumpus, aiškius atsakymus (2–4 sakiniai), tinkamus vaikams\n"
+        f"- Naudok emoji kad padarytum tekstą linksmesnį 🎉\n"
+        f"- Jei klausiama ne apie AI ar kūrybiškumą, švelniai nukreipk atgal į pamoką\n"
+        f"- Dabartinė pamoka: {body.lesson_title} (Savaitė {body.lesson_week})"
+    )
+
+    proxy = AIProxyService(db, UsageTracker(redis))
+    messages = [
+        {"role": m["role"], "text": m["text"]}
+        for m in body.history
+    ] + [{"role": "user", "text": body.message}]
+
+    formatted = [{"role": m["role"], "parts": [{"text": m["text"]}]} for m in messages]
+
+    result = await proxy.gemini_chat(
+        student_id=current_user.id,
+        messages=formatted,
+        model="flash",
+        system_prompt=system_prompt,
+    )
+    text = (
+        result.get("candidates", [{}])[0]
+        .get("content", {})
+        .get("parts", [{}])[0]
+        .get("text", "Atsiprašau, bandykite dar kartą! 🙏")
+    )
+    return {"text": text}
+
+
 @router.get("/veo/poll/{operation_name:path}")
 async def veo_poll(
     operation_name: str,

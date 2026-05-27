@@ -28,8 +28,8 @@ from app.core.redis import UsageTracker
 GEMINI_BASE = "https://generativelanguage.googleapis.com"
 
 GEMINI_SERVICES = {
-    "flash":    f"{GEMINI_BASE}/v1beta/models/gemini-2.0-flash:generateContent",
-    "pro":      f"{GEMINI_BASE}/v1beta/models/gemini-1.5-pro:generateContent",
+    "flash":    f"{GEMINI_BASE}/v1beta/models/gemini-2.5-flash:generateContent",
+    "pro":      f"{GEMINI_BASE}/v1beta/models/gemini-2.5-pro:generateContent",
     "nano":     f"{GEMINI_BASE}/v1beta/models/gemini-nano:generateContent",
     "imagen3":  f"{GEMINI_BASE}/v1beta/models/imagen-3.0-generate-002:predict",
     "imagen3f": f"{GEMINI_BASE}/v1beta/models/imagen-3.0-fast-generate-001:predict",
